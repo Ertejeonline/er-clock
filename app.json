@@ -2,13 +2,15 @@
   "package_id": "com.er.clock",
   "edition": "202601",
   "name": "ER Clock",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "min_app_version": "0.1.0",
   "min_sdk_version": "0.0.10",
-  "supported_languages": ["en"],
+  "supported_languages": [
+    "en"
+  ],
   "tagline": "A clock app for Even G2 glasses",
   "description": "Displays the current time on Even G2 glasses.",
-  "author": "user",
+  "author": "Ertehe",
   "entrypoint": "index.html",
   "permissions": []
 }
