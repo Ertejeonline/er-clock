@@ -2,6 +2,8 @@ import type { EvenAppBridge } from '@evenrealities/even_hub_sdk'
 
 export const state = {
   startupRendered: false,
+  displaySeconds: true,
+  updateTimerId: null as number | null,
 }
 
 let _bridge: EvenAppBridge | null = null

@@ -1,9 +1,22 @@
 import type { AppModule } from '../_shared/app-types'
+import { setDisplaySecondsPreference, showTime } from '../g2/renderer'
+import { rescheduleUpdateTimer } from '../g2/app'
+
+const DISPLAY_SECONDS_UI_KEY = 'er-clock-displaySeconds-ui'
 
 function updateStatus(text: string) {
   console.log(`[ui] ${text}`)
   const el = document.getElementById('status')
   if (el) el.textContent = text
+}
+
+function loadDisplaySecondsUiSetting(): boolean {
+  const raw = window.localStorage.getItem(DISPLAY_SECONDS_UI_KEY)
+  return raw !== 'false'
+}
+
+function saveDisplaySecondsUiSetting(value: boolean): void {
+  window.localStorage.setItem(DISPLAY_SECONDS_UI_KEY, value ? 'true' : 'false')
 }
 
 async function boot() {
@@ -12,9 +25,27 @@ async function boot() {
 
   const connectBtn = document.getElementById('connectBtn') as HTMLButtonElement | null
   const actionBtn = document.getElementById('actionBtn') as HTMLButtonElement | null
+  const displaySecondsCheckbox = document.getElementById('displaySeconds') as HTMLInputElement | null
 
-  document.title = `${app.name} \u2013 Even G2`
+  document.title = `${app.name} – Even G2`
   updateStatus(app.initialStatus ?? `${app.name} app ready`)
+
+  if (displaySecondsCheckbox) {
+    displaySecondsCheckbox.checked = loadDisplaySecondsUiSetting()
+    displaySecondsCheckbox.addEventListener('change', async () => {
+      const checked = displaySecondsCheckbox.checked
+      saveDisplaySecondsUiSetting(checked)
+      try {
+        await setDisplaySecondsPreference(checked)
+        await showTime()
+        rescheduleUpdateTimer()
+        updateStatus(`Display seconds ${checked ? 'on' : 'off'}`)
+      } catch (e) {
+        console.error('[ui] failed to save display seconds', e)
+        updateStatus('Failed to save Display seconds')
+      }
+    })
+  }
 
   const actions = await app.createActions(updateStatus)
 

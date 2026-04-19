@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -9,21 +10,30 @@
 
 <body>
 
-<div id="app">
-  <p id="subtitle" class="text-normal-body"><strong class="text-vlarge-title">Even G2 Clock App</strong><br>A simple clock displaying the current time.</p>
+  <div id="app">
+    <p id="subtitle" class="text-normal-body"><strong class="text-vlarge-title">Even G2 Clock App</strong><br>A simple
+      clock displaying the current time.</p>
 
-  <button id="connectBtn" style="display:none">Connect</button>
-  <button id="actionBtn" style="display:none">Action</button>
+    <button id="connectBtn" style="display:none">Connect</button>
+    <button id="actionBtn" style="display:none">Action</button>
 
-  <div id="status" style="display:none">Clock ready</div>
+    <div class="setting-row">
+      <label>
+        <input id="displaySeconds" type="checkbox" checked />
+        Display seconds
+      </label>
+    </div>
 
-  <details id="log-panel">
-    <summary>Show log</summary>
-    <pre id="event-log"></pre>
-  </details>
-</div>
+    <div id="status" style="display:none">Clock ready</div>
 
-<script type="module" src="/src/main.ts"></script>
+    <details id="log-panel">
+      <summary>Show log</summary>
+      <pre id="event-log"></pre>
+    </details>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
 
 </body>
+
 </html>
