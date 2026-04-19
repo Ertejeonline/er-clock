@@ -26,6 +26,27 @@ body {
   color: var(--color-text);
 }
 
+.setting-row {
+  margin-bottom: 10px;
+}
+
+.setting-row select {
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 4px;
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  min-width: 120px;
+}
+
+.setting-row select:focus {
+  outline: none;
+  border-color: var(--color-accent, #fef991);
+  box-shadow: 0 0 0 2px rgba(254, 249, 145, 0.2);
+}
+
 #log-panel {
   margin-top: var(--spacing-section);
   border-top: 1px solid var(--color-border, #333);
