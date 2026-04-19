@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ER Clock</title>
+  <link rel="stylesheet" href="/src/styles.css">
+</head>
+
+<body>
+
+<div id="app">
+  <p id="subtitle" class="text-normal-body"><strong class="text-vlarge-title">Even G2 Clock App</strong><br>A simple clock displaying the current time.</p>
+
+  <button id="connectBtn" style="display:none">Connect</button>
+  <button id="actionBtn" style="display:none">Action</button>
+
+  <div id="status" style="display:none">Clock ready</div>
+
+  <details id="log-panel">
+    <summary>Show log</summary>
+    <pre id="event-log"></pre>
+  </details>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+
+</body>
+</html>
