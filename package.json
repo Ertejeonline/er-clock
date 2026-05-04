@@ -7,7 +7,7 @@
     "preview": "vite preview",
     "qr": "evenhub qr --http --port 5173",
     "simulator": "evenhub-simulator http://localhost:5173",
-    "pack": "npm run build && evenhub pack app.json dist -o demo.ehpk"
+    "pack": "npm run build && evenhub pack app.json dist -o er-clock.ehpk"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.10",
