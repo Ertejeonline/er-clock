@@ -61,6 +61,11 @@ async function loadPositionSetting(): Promise<void> {
   }
 }
 
+export async function loadSettings(): Promise<void> {
+  await loadDisplaySecondsSetting()
+  await loadPositionSetting()
+}
+
 export async function setDisplaySecondsPreference(value: boolean): Promise<void> {
   state.displaySeconds = value
 
@@ -91,8 +96,6 @@ export async function showTime(): Promise<void> {
   const b = getBridge()
   if (!b) return
 
-  await loadDisplaySecondsSetting()
-  await loadPositionSetting()
   const time = getCurrentTime()
   const coords = getPositionCoordinates(state.position)
 

@@ -1,7 +1,7 @@
 import type { EvenAppBridge } from '@evenrealities/even_hub_sdk'
 import { appendEventLog } from '../_shared/log'
 import { state, setBridge } from './state'
-import { showTime } from './renderer'
+import { showTime, loadSettings } from './renderer'
 import { handleEvent } from './events'
 
 export async function initApp(appBridge: EvenAppBridge): Promise<void> {
@@ -10,6 +10,7 @@ export async function initApp(appBridge: EvenAppBridge): Promise<void> {
   appBridge.onEvenHubEvent(handleEvent)
 
   appendEventLog('Clock: initialised')
+  await loadSettings()
   await showTime()
   scheduleNextTick()
 }
