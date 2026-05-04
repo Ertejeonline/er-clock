@@ -1,6 +1,6 @@
 {
   "name": "er-clock",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",

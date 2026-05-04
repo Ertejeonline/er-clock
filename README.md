@@ -2,7 +2,7 @@
 
 Displays the current time on Even Realities G2 smart glasses. The time updates automatically and the display position can be configured via the browser UI.
 
-**Version:** 1.0.3 — `com.er.clock`
+**Version:** 1.0.4 — `com.er.clock`
 
 ## Features
 

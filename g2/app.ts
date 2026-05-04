@@ -28,14 +28,9 @@ function scheduleNextTick(): void {
     window.clearTimeout(state.updateTimerId)
   }
 
-  // If displaying seconds, update every second; otherwise, align the next tick to the start of the next minute
-  const delay = state.displaySeconds
-    ? 1000
-    : 60000 - (Date.now() % 60000) // aligns next tick to the start of the next minute
-
   state.updateTimerId = window.setTimeout(() => {
     void tick()
-  }, delay)
+  }, 1000)
 }
 
 export async function updateTime(): Promise<void> {
