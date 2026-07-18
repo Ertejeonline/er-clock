@@ -5,21 +5,21 @@
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "preview": "vite preview",
-    "qr": "evenhub qr --http --port 5173",
+    "qr": "evenhub qr -u http://192.168.1.45:5173 --http",
     "simulator": "evenhub-simulator http://localhost:5173",
     "pack": "npm run build && evenhub pack app.json dist -o er-clock.ehpk"
   },
   "dependencies": {
-    "@evenrealities/even_hub_sdk": "^0.0.10",
-    "even-toolkit": "^1.0.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "@evenrealities/even_hub_sdk": "^0.0.12",
+    "even-toolkit": "^1.7.7",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@evenrealities/evenhub-cli": "^0.1.11",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.9.3",
-    "vite": "^6.0.0"
+    "@evenrealities/evenhub-cli": "^0.1.13",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5"
   }
 }
