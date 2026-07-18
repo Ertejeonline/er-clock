@@ -1,34 +1,19 @@
 import type { AppModule } from '../_shared/app-types'
 import { setDisplaySecondsPreference, setPositionPreference, showTime } from '../g2/renderer'
 import { rescheduleUpdateTimer } from '../g2/app'
-import type { PositionType } from '../g2/state'
-
-const DISPLAY_SECONDS_UI_KEY = 'er-clock-displaySeconds-ui'
-const POSITION_UI_KEY = 'er-clock-position-ui'
+import { getBridge, state, type PositionType } from '../g2/state'
+import {
+  initializeUiControlsFromCache,
+  saveDisplaySecondsUiSetting,
+  savePositionUiSetting,
+  syncUiControlsToPreferences,
+  type UiSettingsControls,
+} from './settings-ui'
 
 function updateStatus(text: string) {
   console.log(`[ui] ${text}`)
   const el = document.getElementById('status')
   if (el) el.textContent = text
-}
-
-function loadDisplaySecondsUiSetting(): boolean {
-  const raw = window.localStorage.getItem(DISPLAY_SECONDS_UI_KEY)
-  return raw !== 'false'
-}
-
-function saveDisplaySecondsUiSetting(value: boolean): void {
-  window.localStorage.setItem(DISPLAY_SECONDS_UI_KEY, value ? 'true' : 'false')
-}
-
-function loadPositionUiSetting(): PositionType {
-  const raw = window.localStorage.getItem(POSITION_UI_KEY)
-  const validPositions: PositionType[] = ['topleft', 'topright', 'center', 'bottomleft', 'bottomright']
-  return validPositions.includes(raw as PositionType) ? (raw as PositionType) : 'center'
-}
-
-function savePositionUiSetting(value: PositionType): void {
-  window.localStorage.setItem(POSITION_UI_KEY, value)
 }
 
 async function boot() {
@@ -39,15 +24,26 @@ async function boot() {
   const actionBtn = document.getElementById('actionBtn') as HTMLButtonElement | null
   const displaySecondsCheckbox = document.getElementById('displaySeconds') as HTMLInputElement | null
   const positionSelect = document.getElementById('positionSelect') as HTMLSelectElement | null
+  const controls: UiSettingsControls = { displaySecondsCheckbox, positionSelect }
 
   document.title = `${app.name} – Even G2`
   updateStatus(app.initialStatus ?? `${app.name} app ready`)
 
+  initializeUiControlsFromCache(window.localStorage, controls)
+
+  function syncControlsFromAppState(): void {
+    if (!getBridge()) return
+
+    syncUiControlsToPreferences(window.localStorage, controls, {
+      displaySeconds: state.displaySeconds,
+      position: state.position,
+    })
+  }
+
   if (displaySecondsCheckbox) {
-    displaySecondsCheckbox.checked = loadDisplaySecondsUiSetting()
     displaySecondsCheckbox.addEventListener('change', async () => {
       const checked = displaySecondsCheckbox.checked
-      saveDisplaySecondsUiSetting(checked)
+      saveDisplaySecondsUiSetting(window.localStorage, checked)
       try {
         await setDisplaySecondsPreference(checked)
         await showTime()
@@ -61,10 +57,9 @@ async function boot() {
   }
 
   if (positionSelect) {
-    positionSelect.value = loadPositionUiSetting()
     positionSelect.addEventListener('change', async () => {
       const position = positionSelect.value as PositionType
-      savePositionUiSetting(position)
+      savePositionUiSetting(window.localStorage, position)
       try {
         await setPositionPreference(position)
         await showTime()
@@ -78,9 +73,14 @@ async function boot() {
 
   const actions = await app.createActions(updateStatus)
 
+  async function connectAndSyncControls(): Promise<void> {
+    await actions.connect()
+    syncControlsFromAppState()
+  }
+
   connectBtn?.addEventListener('click', async () => {
     connectBtn.disabled = true
-    try { await actions.connect() }
+    try { await connectAndSyncControls() }
     catch (e) { console.error(e); updateStatus('Connect failed') }
     finally { connectBtn.disabled = false }
   })
@@ -92,7 +92,7 @@ async function boot() {
     finally { actionBtn.disabled = false }
   })
 
-  void actions.connect().catch((e) => {
+  void connectAndSyncControls().catch((e) => {
     console.error('[app-loader] auto-connect failed', e)
   })
 }

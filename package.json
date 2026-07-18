@@ -1,13 +1,15 @@
 {
   "name": "er-clock",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "preview": "vite preview",
     "qr": "evenhub qr -u http://192.168.1.45:5173 --http",
     "simulator": "evenhub-simulator http://localhost:5173",
-    "pack": "npm run build && evenhub pack app.json dist -o er-clock.ehpk"
+    "pack": "npm run build && evenhub pack app.json dist -o er-clock.ehpk",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.12",
@@ -20,6 +22,12 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "typescript": "^7.0.2",
-    "vite": "^8.1.5"
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "@evenrealities/evenhub-cli": {
+      "typescript": "$typescript"
+    }
   }
 }
