@@ -4,10 +4,56 @@ import {
   TextContainerProperty,
   TextContainerUpgrade,
 } from '@evenrealities/even_hub_sdk'
+import { appendEventLog } from '../_shared/log'
 import { state, getBridge, type PositionType } from './state'
 
 export const DISPLAY_SECONDS_KEY = 'er-clock-displaySeconds'
 export const POSITION_KEY = 'er-clock-position'
+
+type RenderFailureHandler = (err: unknown) => void
+
+let renderFailureHandler: RenderFailureHandler | null = null
+let renderQueue: Promise<void> = Promise.resolve()
+let consecutiveRenderFailures = 0
+const RENDER_FAILURE_THRESHOLD = 3
+
+export function setRenderFailureHandler(handler: RenderFailureHandler | null): void {
+  renderFailureHandler = handler
+}
+
+function runSerializedRender(task: () => Promise<void>): Promise<void> {
+  const next = renderQueue
+    .then(task, task)
+    .then(() => {
+      consecutiveRenderFailures = 0
+    })
+    .catch((err) => {
+      console.warn('[clock] render operation failed', err)
+      appendEventLog('Renderer: operation failed')
+      consecutiveRenderFailures += 1
+
+      if (consecutiveRenderFailures >= RENDER_FAILURE_THRESHOLD) {
+        consecutiveRenderFailures = 0
+        if (renderFailureHandler) {
+          try {
+            renderFailureHandler(err)
+          } catch (handlerErr) {
+            console.warn('[clock] render failure handler crashed', handlerErr)
+          }
+        }
+      }
+    })
+
+  renderQueue = next
+  return next
+}
+
+export function resetRendererSession(): void {
+  state.startupRendered = false
+  state.lastRenderedPosition = state.position
+  renderQueue = Promise.resolve()
+  consecutiveRenderFailures = 0
+}
 
 function getCurrentTime(): string {
   const now = new Date()
@@ -93,33 +139,15 @@ export async function setPositionPreference(position: PositionType): Promise<voi
 }
 
 export async function showTime(): Promise<void> {
-  const b = getBridge()
-  if (!b) return
+  await runSerializedRender(async () => {
+    const b = getBridge()
+    if (!b) return
 
-  const time = getCurrentTime()
-  const coords = getPositionCoordinates(state.position)
+    const time = getCurrentTime()
+    const coords = getPositionCoordinates(state.position)
 
-  if (!state.startupRendered) {
-    await b.createStartUpPageContainer(new CreateStartUpPageContainer({
-      containerTotalNum: 1,
-      textObject: [
-        new TextContainerProperty({
-          containerID: 1,
-          containerName: 'time',
-          content: time,
-          xPosition: coords.x,
-          yPosition: coords.y,
-          width: 80,
-          height: 40,
-        }),
-      ],
-    }))
-    state.startupRendered = true
-    state.lastRenderedPosition = state.position
-  } else if (state.position !== state.lastRenderedPosition) {
-    // Position changed, rebuild the container at new location
-    await b.rebuildPageContainer(
-      new RebuildPageContainer({
+    if (!state.startupRendered) {
+      await b.createStartUpPageContainer(new CreateStartUpPageContainer({
         containerTotalNum: 1,
         textObject: [
           new TextContainerProperty({
@@ -132,17 +160,35 @@ export async function showTime(): Promise<void> {
             height: 40,
           }),
         ],
-      }),
-    )
-    state.lastRenderedPosition = state.position
-  } else {
-    // Only update content
-    await b.textContainerUpgrade(
-      new TextContainerUpgrade({
-        containerID: 1,
-        containerName: 'time',
-        content: time,
-      }),
-    )
-  }
+      }))
+      state.startupRendered = true
+      state.lastRenderedPosition = state.position
+    } else if (state.position !== state.lastRenderedPosition) {
+      await b.rebuildPageContainer(
+        new RebuildPageContainer({
+          containerTotalNum: 1,
+          textObject: [
+            new TextContainerProperty({
+              containerID: 1,
+              containerName: 'time',
+              content: time,
+              xPosition: coords.x,
+              yPosition: coords.y,
+              width: 80,
+              height: 40,
+            }),
+          ],
+        }),
+      )
+      state.lastRenderedPosition = state.position
+    } else {
+      await b.textContainerUpgrade(
+        new TextContainerUpgrade({
+          containerID: 1,
+          containerName: 'time',
+          content: time,
+        }),
+      )
+    }
+  })
 }

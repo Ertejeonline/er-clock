@@ -2,7 +2,7 @@
 
 Displays the current time on Even Realities G2 smart glasses. The time updates automatically and the display position can be configured via the browser UI.
 
-**Version:** 1.0.5 — `com.er.clock`
+**Version:** 1.1.1 — `com.er.clock`
 
 ## Features
 
@@ -12,6 +12,9 @@ Displays the current time on Even Realities G2 smart glasses. The time updates a
 - Settings are persisted to device local storage, survive app restarts, and sync back into the browser controls on reconnect
 - Efficient rendering: updates text in-place when only the time changes; only rebuilds the container when the position changes
 - Double-tap exits the app via the host OS exit dialogue
+- Automatic reconnect and lifecycle recovery when bridge/device connectivity drops
+- Background-state snapshot and restore support to survive headless WebView migration
+- Browser status panel now shows reconnect backoff countdown and attempt number during auto-connect retries
 
 ## Project structure
 
@@ -43,3 +46,11 @@ npm run pack      # build and package as er-clock.ehpk for Even Hub submission
 - Even Hub SDK `^0.0.10`
 - Even Hub CLI `^0.1.11`
 - Even Realities G2 glasses or the Even Hub simulator
+
+## Stability and Recovery
+
+- Background state is registered via a compatibility wrapper in `_shared/background-state.ts`, using native SDK hooks when available and a local fallback otherwise.
+- Bridge connection is guarded with automatic retry when the app receives abnormal/system exit events, BLE disconnect signals, or repeated render failures.
+- Clock refresh uses a resilient timer loop that logs and recovers from transient update errors instead of stopping updates permanently.
+- Foreground lifecycle listeners (`pageshow` and `visibilitychange`) resync reconnect/update behavior when the WebView is reactivated.
+- Browser auto-connect retries use escalating backoff delays and display retry timing in the status panel.

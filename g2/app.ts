@@ -1,13 +1,11 @@
 import type { EvenAppBridge } from '@evenrealities/even_hub_sdk'
 import { appendEventLog } from '../_shared/log'
-import { state, setBridge } from './state'
+import { state, registerBackgroundState, setBridge } from './state'
 import { showTime, loadSettings } from './renderer'
-import { handleEvent } from './events'
 
 export async function initApp(appBridge: EvenAppBridge): Promise<void> {
   setBridge(appBridge)
-
-  appBridge.onEvenHubEvent(handleEvent)
+  registerBackgroundState()
 
   appendEventLog('Clock: initialised')
   await loadSettings()
@@ -16,18 +14,32 @@ export async function initApp(appBridge: EvenAppBridge): Promise<void> {
 }
 
 async function tick(): Promise<void> {
-  await updateTime()
+  await safeUpdateTime()
   scheduleNextTick()
+}
+
+async function safeUpdateTime(): Promise<void> {
+  try {
+    await updateTime()
+  } catch (err) {
+    console.warn('[clock] update tick failed', err)
+    appendEventLog('Clock: update tick failed (recovered)')
+  }
 }
 
 export function rescheduleUpdateTimer(): void {
   scheduleNextTick()
 }
 
-function scheduleNextTick(): void {
+export function stopUpdateTimer(): void {
   if (state.updateTimerId !== null) {
     window.clearTimeout(state.updateTimerId)
+    state.updateTimerId = null
   }
+}
+
+function scheduleNextTick(): void {
+  stopUpdateTimer()
 
   state.updateTimerId = window.setTimeout(() => {
     void tick()
