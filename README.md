@@ -2,7 +2,7 @@
 
 Displays the current time on Even Realities G2 smart glasses. The time updates automatically and the display position can be configured via the browser UI.
 
-**Version:** 1.1.1 — `com.er.clock`
+**Version:** 1.1.2 — `com.er.clock`
 
 ## Features
 
@@ -13,6 +13,7 @@ Displays the current time on Even Realities G2 smart glasses. The time updates a
 - Efficient rendering: updates text in-place when only the time changes; only rebuilds the container when the position changes
 - Double-tap exits the app via the host OS exit dialogue
 - Automatic reconnect and lifecycle recovery when bridge/device connectivity drops
+- User-confirmed exit now stays exited (no auto-relaunch loop)
 - Background-state snapshot and restore support to survive headless WebView migration
 - Browser status panel now shows reconnect backoff countdown and attempt number during auto-connect retries
 

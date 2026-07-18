@@ -20,6 +20,9 @@ export function createClockActions(setStatus: SetStatus): AppActions {
   let connected = false
   let connecting = false
   let appInForeground = true
+  let autoReconnectEnabled = true
+  let exitDialogPending = false
+  let exitDialogRecoveryTimerId: number | null = null
   let teardownRegistered = false
   let unsubscribeEvenHubEvent: (() => void) | null = null
   let unsubscribeDeviceStatus: (() => void) | null = null
@@ -36,11 +39,37 @@ export function createClockActions(setStatus: SetStatus): AppActions {
     }
   }
 
+  const clearExitDialogRecoveryTimer = () => {
+    if (exitDialogRecoveryTimerId !== null) {
+      window.clearTimeout(exitDialogRecoveryTimerId)
+      exitDialogRecoveryTimerId = null
+    }
+  }
+
+  const scheduleExitDialogRecovery = () => {
+    clearExitDialogRecoveryTimer()
+    exitDialogRecoveryTimerId = window.setTimeout(() => {
+      exitDialogRecoveryTimerId = null
+      if (!connected || !exitDialogPending) {
+        return
+      }
+
+      // If no hard-exit event arrived, assume user dismissed the dialog.
+      exitDialogPending = false
+      appInForeground = true
+      appendEventLog('Lifecycle: exit dialog dismissed')
+    }, 2000)
+  }
+
   const scheduleReconnect = (delayMs: number) => {
+    if (!autoReconnectEnabled) {
+      return
+    }
+
     clearReconnectTimer()
     reconnectTimerId = window.setTimeout(() => {
       reconnectTimerId = null
-      if (connected || connecting || !appInForeground) {
+      if (connected || connecting || !appInForeground || !autoReconnectEnabled) {
         return
       }
       appendEventLog('Lifecycle: attempting automatic reconnect')
@@ -59,6 +88,8 @@ export function createClockActions(setStatus: SetStatus): AppActions {
   const cleanupConnection = () => {
     cleanupBridgeListeners()
     stopUpdateTimer()
+    clearExitDialogRecoveryTimer()
+    exitDialogPending = false
     resetRendererSession()
     clearBridge()
     connected = false
@@ -84,7 +115,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
 
     window.addEventListener('pageshow', () => {
       appInForeground = true
-      if (!connected && !connecting) {
+      if (!connected && !connecting && autoReconnectEnabled) {
         scheduleReconnect(250)
       }
     })
@@ -114,6 +145,9 @@ export function createClockActions(setStatus: SetStatus): AppActions {
     }
 
     connecting = true
+    autoReconnectEnabled = true
+    exitDialogPending = false
+    clearExitDialogRecoveryTimer()
     clearReconnectTimer()
     setStatus('Connecting to Even bridge...')
     appendEventLog(`ER Clock v${typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}`)
@@ -125,15 +159,30 @@ export function createClockActions(setStatus: SetStatus): AppActions {
 
       unsubscribeEvenHubEvent = bridge.onEvenHubEvent((event) => {
         try {
-          handleEvent(event)
-
           const eventType = resolveEventType(event)
+
+          if (eventType === OsEventTypeList.DOUBLE_CLICK_EVENT) {
+            exitDialogPending = true
+            scheduleExitDialogRecovery()
+          }
+
+          handleEvent(event)
           if (
             eventType === OsEventTypeList.ABNORMAL_EXIT_EVENT ||
             eventType === OsEventTypeList.SYSTEM_EXIT_EVENT
           ) {
-            appendEventLog('Lifecycle: exit event detected')
+            appendEventLog(`Lifecycle: exit event detected (${String(eventType)})`)
+            const intentionalExit = exitDialogPending
             cleanupConnection()
+
+            if (intentionalExit) {
+              autoReconnectEnabled = false
+              appInForeground = false
+              appendEventLog('Lifecycle: intentional exit confirmed')
+              setStatus('Exited by user')
+              return
+            }
+
             setStatus('Disconnected. Reconnecting...')
             scheduleReconnect(3000)
           }
@@ -183,6 +232,9 @@ export function createClockActions(setStatus: SetStatus): AppActions {
       })
 
       connected = true
+      appInForeground = true
+      exitDialogPending = false
+      clearExitDialogRecoveryTimer()
       setStatus('Connected. Displaying current time.')
       appendEventLog('Bridge connected')
     } catch (err) {
