@@ -9,6 +9,7 @@ export const state = {
   position: 'center' as PositionType,
   lastRenderedPosition: 'center' as PositionType,
   updateTimerId: null as number | null,
+  appInForeground: true,
 }
 
 let _bridge: EvenAppBridge | null = null

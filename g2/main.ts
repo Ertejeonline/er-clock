@@ -1,10 +1,10 @@
 import { DeviceConnectType, OsEventTypeList, type EvenHubEvent, waitForEvenAppBridge } from '@evenrealities/even_hub_sdk'
 import type { AppActions, SetStatus } from '../_shared/app-types'
 import { appendEventLog } from '../_shared/log'
-import { initApp, stopUpdateTimer, updateTime } from './app'
+import { initApp, rescheduleUpdateTimer, stopUpdateTimer, updateTime } from './app'
 import { handleEvent } from './events'
 import { resetRendererSession, setRenderFailureHandler } from './renderer'
-import { clearBridge } from './state'
+import { clearBridge, state } from './state'
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -19,7 +19,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export function createClockActions(setStatus: SetStatus): AppActions {
   let connected = false
   let connecting = false
-  let appInForeground = true
   let exitDialogPending = false
   let exitDialogRecoveryTimerId: number | null = null
   let teardownRegistered = false
@@ -47,17 +46,39 @@ export function createClockActions(setStatus: SetStatus): AppActions {
 
       // If no hard-exit event arrived, assume user dismissed the dialog.
       exitDialogPending = false
-      appInForeground = true
+      state.appInForeground = true
       appendEventLog('Lifecycle: exit dialog dismissed')
     }, 2000)
   }
 
   const cleanupBridgeListeners = () => {
-    unsubscribeEvenHubEvent?.()
+    const unsubEvent = unsubscribeEvenHubEvent
+    const unsubDevice = unsubscribeDeviceStatus
     unsubscribeEvenHubEvent = null
-    unsubscribeDeviceStatus?.()
     unsubscribeDeviceStatus = null
     setRenderFailureHandler(null)
+
+    // Defer the actual unsubscribe call so it never runs synchronously from
+    // within the listener callback that may have triggered this cleanup.
+    if (unsubEvent) {
+      window.setTimeout(() => {
+        try {
+          unsubEvent()
+        } catch (err) {
+          console.warn('[clock] cleanup listener failed', err)
+        }
+      }, 0)
+    }
+
+    if (unsubDevice) {
+      window.setTimeout(() => {
+        try {
+          unsubDevice()
+        } catch (err) {
+          console.warn('[clock] cleanup device status listener failed', err)
+        }
+      }, 0)
+    }
   }
 
   const cleanupConnection = () => {
@@ -77,26 +98,35 @@ export function createClockActions(setStatus: SetStatus): AppActions {
     teardownRegistered = true
 
     window.addEventListener('beforeunload', () => {
-      appInForeground = false
+      state.appInForeground = false
       cleanupConnection()
     })
 
     window.addEventListener('pagehide', () => {
-      appInForeground = false
+      state.appInForeground = false
       stopUpdateTimer()
     })
 
     window.addEventListener('pageshow', () => {
-      appInForeground = true
+      if (!connected) return
+      state.appInForeground = true
+      appendEventLog('Lifecycle: pageshow')
+      rescheduleUpdateTimer()
+      void updateTime()
     })
 
     document.addEventListener('visibilitychange', () => {
-      appInForeground = !document.hidden
-      if (!appInForeground) {
+      state.appInForeground = !document.hidden
+      if (!state.appInForeground) {
+        appendEventLog('Lifecycle: visibilitychange hidden')
         stopUpdateTimer()
         return
       }
 
+      if (!connected) return
+      appendEventLog('Lifecycle: visibilitychange visible')
+      rescheduleUpdateTimer()
+      void updateTime()
     })
   }
 
@@ -141,7 +171,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
             cleanupConnection()
 
             if (intentionalExit) {
-              appInForeground = false
+              state.appInForeground = false
               appendEventLog('Lifecycle: intentional exit confirmed')
               setStatus('Exited by user')
               return
@@ -192,7 +222,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
       })
 
       connected = true
-      appInForeground = true
+      state.appInForeground = true
       exitDialogPending = false
       clearExitDialogRecoveryTimer()
       setStatus('Connected. Displaying current time.')

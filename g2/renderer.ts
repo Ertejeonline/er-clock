@@ -5,6 +5,7 @@ import {
   TextContainerUpgrade,
 } from '@evenrealities/even_hub_sdk'
 import { appendEventLog } from '../_shared/log'
+import { executeSerialized, resetBridgeSerializer } from '../_shared/bridge-serializer'
 import { state, getBridge, type PositionType } from './state'
 
 export const DISPLAY_SECONDS_KEY = 'er-clock-displaySeconds'
@@ -12,8 +13,9 @@ export const POSITION_KEY = 'er-clock-position'
 
 type RenderFailureHandler = (err: unknown) => void
 
+const RENDER_TIMEOUT_MS = 5000
+
 let renderFailureHandler: RenderFailureHandler | null = null
-let renderQueue: Promise<void> = Promise.resolve()
 let consecutiveRenderFailures = 0
 const RENDER_FAILURE_THRESHOLD = 3
 
@@ -22,8 +24,7 @@ export function setRenderFailureHandler(handler: RenderFailureHandler | null): v
 }
 
 function runSerializedRender(task: () => Promise<void>): Promise<void> {
-  const next = renderQueue
-    .then(task, task)
+  return executeSerialized(task, RENDER_TIMEOUT_MS, 'render')
     .then(() => {
       consecutiveRenderFailures = 0
     })
@@ -43,15 +44,12 @@ function runSerializedRender(task: () => Promise<void>): Promise<void> {
         }
       }
     })
-
-  renderQueue = next
-  return next
 }
 
 export function resetRendererSession(): void {
   state.startupRendered = false
   state.lastRenderedPosition = state.position
-  renderQueue = Promise.resolve()
+  resetBridgeSerializer()
   consecutiveRenderFailures = 0
 }
 
@@ -70,7 +68,7 @@ async function loadDisplaySecondsSetting(): Promise<void> {
   if (!b) return
 
   try {
-    const raw = await b.getLocalStorage(DISPLAY_SECONDS_KEY)
+    const raw = await executeSerialized(() => b.getLocalStorage(DISPLAY_SECONDS_KEY), RENDER_TIMEOUT_MS, 'getLocalStorage')
     state.displaySeconds = raw === '' ? true : raw === 'true'
   } catch (err) {
     console.warn('[clock] failed to load displaySeconds setting', err)
@@ -98,7 +96,7 @@ async function loadPositionSetting(): Promise<void> {
   if (!b) return
 
   try {
-    const raw = await b.getLocalStorage(POSITION_KEY)
+    const raw = await executeSerialized(() => b.getLocalStorage(POSITION_KEY), RENDER_TIMEOUT_MS, 'getLocalStorage')
     const validPositions: PositionType[] = ['topleft', 'topright', 'center', 'bottomleft', 'bottomright']
     state.position = (validPositions.includes(raw as PositionType) ? raw : 'center') as PositionType
   } catch (err) {
@@ -119,7 +117,7 @@ export async function setDisplaySecondsPreference(value: boolean): Promise<void>
   if (!b) return
 
   try {
-    await b.setLocalStorage(DISPLAY_SECONDS_KEY, String(value))
+    await executeSerialized(() => b.setLocalStorage(DISPLAY_SECONDS_KEY, String(value)), RENDER_TIMEOUT_MS, 'setLocalStorage')
   } catch (err) {
     console.warn('[clock] failed to persist displaySeconds setting', err)
   }
@@ -132,7 +130,7 @@ export async function setPositionPreference(position: PositionType): Promise<voi
   if (!b) return
 
   try {
-    await b.setLocalStorage(POSITION_KEY, position)
+    await executeSerialized(() => b.setLocalStorage(POSITION_KEY, position), RENDER_TIMEOUT_MS, 'setLocalStorage')
   } catch (err) {
     console.warn('[clock] failed to persist position setting', err)
   }

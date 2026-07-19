@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-07-20
+
+### Fixed
+- Fixed clock display freezing after the app returned to the foreground (empty `visibilitychange`/`pageshow` handlers previously left the update timer stopped)
+- Added `state.appInForeground` as the single source of truth for foreground/background tracking, with a matching guard in the tick loop
+- Added SDK-level `FOREGROUND_ENTER_EVENT`/`FOREGROUND_EXIT_EVENT` handling as defense-in-depth alongside browser visibility events
+- Serialized all BLE bridge calls (renders and local storage reads/writes) through a shared queue with per-call timeouts to prevent concurrent bridge operations from corrupting state or hanging
+- Made bridge listener cleanup defer `unsubscribe()` calls to avoid a race where a listener unsubscribes itself mid-callback
+
 ## [1.1.3] - 2026-07-19
 
 ### Changed

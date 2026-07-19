@@ -14,7 +14,9 @@ export async function initApp(appBridge: EvenAppBridge): Promise<void> {
 }
 
 async function tick(): Promise<void> {
-  await safeUpdateTime()
+  if (state.appInForeground) {
+    await safeUpdateTime()
+  }
   scheduleNextTick()
 }
 

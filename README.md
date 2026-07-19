@@ -2,7 +2,7 @@
 
 Displays the current time on Even Realities G2 smart glasses. The time updates automatically and the display position can be configured via the browser UI.
 
-**Version:** 1.1.3 — `com.er.clock`
+**Version:** 1.1.4 — `com.er.clock`
 
 ## Features
 
@@ -52,3 +52,4 @@ npm run pack      # build and package as er-clock.ehpk for Even Hub submission
 - Bridge connection failures and disconnects are surfaced to the status panel without automatic reconnect/relaunch.
 - Clock refresh uses a resilient timer loop that logs and recovers from transient update errors instead of stopping updates permanently.
 - Foreground lifecycle listeners (`pageshow` and `visibilitychange`) keep update timers aligned with WebView visibility.
+- All BLE bridge calls (renders and local storage reads/writes) are serialized through a shared queue (`_shared/bridge-serializer.ts`) with per-call timeouts, preventing concurrent bridge operations from hanging or corrupting state.
