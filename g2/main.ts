@@ -20,23 +20,14 @@ export function createClockActions(setStatus: SetStatus): AppActions {
   let connected = false
   let connecting = false
   let appInForeground = true
-  let autoReconnectEnabled = true
   let exitDialogPending = false
   let exitDialogRecoveryTimerId: number | null = null
   let teardownRegistered = false
   let unsubscribeEvenHubEvent: (() => void) | null = null
   let unsubscribeDeviceStatus: (() => void) | null = null
-  let reconnectTimerId: number | null = null
 
   const resolveEventType = (event: EvenHubEvent): number | undefined => {
     return event.sysEvent?.eventType ?? event.textEvent?.eventType ?? event.listEvent?.eventType
-  }
-
-  const clearReconnectTimer = () => {
-    if (reconnectTimerId !== null) {
-      window.clearTimeout(reconnectTimerId)
-      reconnectTimerId = null
-    }
   }
 
   const clearExitDialogRecoveryTimer = () => {
@@ -59,22 +50,6 @@ export function createClockActions(setStatus: SetStatus): AppActions {
       appInForeground = true
       appendEventLog('Lifecycle: exit dialog dismissed')
     }, 2000)
-  }
-
-  const scheduleReconnect = (delayMs: number) => {
-    if (!autoReconnectEnabled) {
-      return
-    }
-
-    clearReconnectTimer()
-    reconnectTimerId = window.setTimeout(() => {
-      reconnectTimerId = null
-      if (connected || connecting || !appInForeground || !autoReconnectEnabled) {
-        return
-      }
-      appendEventLog('Lifecycle: attempting automatic reconnect')
-      void attemptConnect()
-    }, delayMs)
   }
 
   const cleanupBridgeListeners = () => {
@@ -103,21 +78,16 @@ export function createClockActions(setStatus: SetStatus): AppActions {
 
     window.addEventListener('beforeunload', () => {
       appInForeground = false
-      clearReconnectTimer()
       cleanupConnection()
     })
 
     window.addEventListener('pagehide', () => {
       appInForeground = false
-      clearReconnectTimer()
       stopUpdateTimer()
     })
 
     window.addEventListener('pageshow', () => {
       appInForeground = true
-      if (!connected && !connecting && autoReconnectEnabled) {
-        scheduleReconnect(250)
-      }
     })
 
     document.addEventListener('visibilitychange', () => {
@@ -127,9 +97,6 @@ export function createClockActions(setStatus: SetStatus): AppActions {
         return
       }
 
-      if (!connected && !connecting) {
-        scheduleReconnect(250)
-      }
     })
   }
 
@@ -145,10 +112,8 @@ export function createClockActions(setStatus: SetStatus): AppActions {
     }
 
     connecting = true
-    autoReconnectEnabled = true
     exitDialogPending = false
     clearExitDialogRecoveryTimer()
-    clearReconnectTimer()
     setStatus('Connecting to Even bridge...')
     appendEventLog(`ER Clock v${typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev'}`)
 
@@ -176,15 +141,13 @@ export function createClockActions(setStatus: SetStatus): AppActions {
             cleanupConnection()
 
             if (intentionalExit) {
-              autoReconnectEnabled = false
               appInForeground = false
               appendEventLog('Lifecycle: intentional exit confirmed')
               setStatus('Exited by user')
               return
             }
 
-            setStatus('Disconnected. Reconnecting...')
-            scheduleReconnect(3000)
+            setStatus('Disconnected. Tap Connect to reconnect.')
           }
         } catch (err) {
           console.error('[clock] event handler failed', err)
@@ -202,8 +165,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
           ) {
             appendEventLog(`Lifecycle: device disconnected (${DeviceConnectType[status.connectType]})`)
             cleanupConnection()
-            setStatus('Disconnected. Reconnecting...')
-            scheduleReconnect(3000)
+            setStatus('Disconnected. Tap Connect to reconnect.')
           }
         } catch (err) {
           console.warn('[clock] device status handler failed', err)
@@ -215,9 +177,8 @@ export function createClockActions(setStatus: SetStatus): AppActions {
       } catch (err) {
         console.error('[clock] initApp failed', err)
         cleanupConnection()
-        setStatus('Initialization failed. Retrying...')
+        setStatus('Initialization failed. Tap Connect to retry.')
         appendEventLog('Lifecycle: initApp failed (recovered)')
-        scheduleReconnect(3000)
         return
       }
 
@@ -227,8 +188,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
         }
         appendEventLog('Lifecycle: repeated render failures detected')
         cleanupConnection()
-        setStatus('Display update failed. Reconnecting...')
-        scheduleReconnect(3000)
+        setStatus('Display update failed. Tap Connect to reconnect.')
       })
 
       connected = true
@@ -241,9 +201,6 @@ export function createClockActions(setStatus: SetStatus): AppActions {
       console.error('[clock] connect failed', err)
       setStatus('Bridge not found. Running in mock mode.')
       appendEventLog('Connection failed')
-      if (appInForeground) {
-        scheduleReconnect(5000)
-      }
     } finally {
       connecting = false
     }
@@ -266,8 +223,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
         console.error('[clock] manual update failed', err)
         appendEventLog('Clock: manual update failed')
         cleanupConnection()
-        setStatus('Update failed. Reconnecting...')
-        scheduleReconnect(1500)
+        setStatus('Update failed. Tap Connect to reconnect.')
       }
     },
   }
