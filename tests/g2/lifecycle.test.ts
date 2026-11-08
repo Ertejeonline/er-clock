@@ -36,7 +36,7 @@ vi.mock('@evenrealities/even_hub_sdk', () => {
 })
 
 import { OsEventTypeList } from '@evenrealities/even_hub_sdk'
-import { handleEvent } from '../../g2/events'
+import { handleEvent, resetForegroundTracking } from '../../g2/events'
 import { rescheduleUpdateTimer, stopUpdateTimer } from '../../g2/app'
 import { resetRendererSession } from '../../g2/renderer'
 import { setBridge, state } from '../../g2/state'
@@ -55,6 +55,7 @@ function makeBridgeMocks() {
 describe('g2 lifecycle: foreground/background handling', () => {
   beforeEach(() => {
     resetRendererSession()
+    resetForegroundTracking()
     state.appInForeground = true
     state.startupRendered = false
     state.position = 'center'
@@ -112,6 +113,26 @@ describe('g2 lifecycle: foreground/background handling', () => {
     handleEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_ENTER_EVENT } } as never)
     // Timer id should be unchanged since the app was already foregrounded.
     expect(state.updateTimerId).toBe(timerId)
+  })
+
+  it('keeps the clock running when the system menu opens and closes over it', () => {
+    const bridge = makeBridgeMocks()
+    setBridge(bridge as never)
+
+    rescheduleUpdateTimer()
+    expect(state.updateTimerId).not.toBeNull()
+
+    // Documented sequence: menu opens (enter), menu closes (exit); the clock stays on screen.
+    handleEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_ENTER_EVENT } } as never)
+    handleEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_EXIT_EVENT } } as never)
+
+    expect(state.appInForeground).toBe(true)
+    expect(state.updateTimerId).not.toBeNull()
+
+    // A later exit with no overlay open is a real background transition.
+    handleEvent({ sysEvent: { eventType: OsEventTypeList.FOREGROUND_EXIT_EVENT } } as never)
+    expect(state.appInForeground).toBe(false)
+    expect(state.updateTimerId).toBeNull()
   })
 
   it('skips display updates while backgrounded but resumes once foreground returns', async () => {

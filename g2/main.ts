@@ -2,7 +2,7 @@ import { DeviceConnectType, OsEventTypeList, type EvenHubEvent, waitForEvenAppBr
 import type { AppActions, SetStatus } from '../_shared/app-types'
 import { appendEventLog } from '../_shared/log'
 import { initApp, rescheduleUpdateTimer, stopUpdateTimer, updateTime } from './app'
-import { handleEvent } from './events'
+import { handleEvent, resetForegroundTracking } from './events'
 import { resetRendererSession, setRenderFailureHandler } from './renderer'
 import { clearBridge, state } from './state'
 
@@ -86,6 +86,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
     stopUpdateTimer()
     clearExitDialogRecoveryTimer()
     exitDialogPending = false
+    resetForegroundTracking()
     resetRendererSession()
     clearBridge()
     connected = false
@@ -119,6 +120,7 @@ export function createClockActions(setStatus: SetStatus): AppActions {
       state.appInForeground = !document.hidden
       if (!state.appInForeground) {
         appendEventLog('Lifecycle: visibilitychange hidden')
+        resetForegroundTracking()
         stopUpdateTimer()
         return
       }

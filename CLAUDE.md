@@ -1,6 +1,6 @@
 # ER Clock (Even G2)
 
-Shows the current time on the G2 display, with configurable position (top-left, top-right, center, bottom-left, bottom-right) and seconds on/off. Version 1.1.4, package `com.er.clock`, author Ertehe. Repo: https://github.com/Ertejeonline/er-clock
+Shows the current time on the G2 display, with configurable position (top-left, top-right, center, bottom-left, bottom-right) and seconds on/off. Version 1.1.5, package `com.er.clock`, author Ertehe. Repo: https://github.com/Ertejeonline/er-clock
 
 Read `../CLAUDE.md` for shared G2 rules. Feature list is in `README.md`; release notes in `CHANGELOG.md`.
 
