@@ -8,7 +8,7 @@ Read `../CLAUDE.md` for shared G2 rules. Feature list is in `README.md`; release
 - `g2/` - glasses app: `main.ts`, `app.ts`, `renderer.ts`, `events.ts`, `state.ts`, `index.ts`
 - `src/` - browser UI: `main.ts`, `settings-ui.ts`, `connect-retry.ts`, `styles.css`
 - `_shared/` - types, logging, background-state wrapper, bridge serializer
-- `resources/` - SDK skill docs (also copied into `../.claude/skills/`)
+- SDK and CLI reference docs live one level up, in `../.claude/skills/` and `../docs/`
 - `tests/` - Vitest tests (`tests/g2`, `tests/shared`, `tests/src`)
 
 ## Commands
